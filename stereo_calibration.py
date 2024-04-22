@@ -7,6 +7,7 @@ import yaml
 import os
 import threading
 import shutil
+import argparse
 
 # Some useful resources: 
 # - https://temugeb.github.io/opencv/python/2021/02/02/stereo-camera-calibration-and-triangulation.html
@@ -44,7 +45,8 @@ def capture_streams():
 
 
 	# Update the ID's below based on which webcam corresponds to which device in /dev/videoX with X=id
-	images_folder = '~/calib_imgs'
+	images_folder = os.path.join(os.path.expanduser("~"),'calib_imgs')
+
 
 
 	# Setup left cam
@@ -134,7 +136,7 @@ def capture_streams():
 
 def camera_calibrate(cam_name):
 	# Get images from image folder
-	images_folder = os.path.join('~/calib_imgs', cam_name, '*')
+	images_folder = os.path.join(os.path.expanduser("~"),'calib_imgs', cam_name, '*')
 	images_names = sorted(glob.glob(images_folder))
 	images = []
 	for imname in images_names:
@@ -191,7 +193,8 @@ def camera_calibrate(cam_name):
 	return K, distortion_coeffs
 
 def stereo_calibrate_and_rectify(K_left, dist_left, K_right, dist_right):
-	images_folder = '~/calib_imgs'
+	images_folder = os.path.join(os.path.expanduser("~"),'calib_imgs')
+
 	left_images_folder = os.path.join(images_folder, "left", '*')
 	left_images_names = sorted(glob.glob(left_images_folder))
 	right_images_folder = os.path.join(images_folder, "right", '*')
@@ -332,7 +335,7 @@ def stereo_match(R, T, Left_Stereo_Map, Right_Stereo_Map, roiL, roiR):
 	)
 
 	# Get images
-	images_folder = '~/calib_imgs'
+	images_folder = os.path.join(os.path.expanduser("~"),'calib_imgs')
 	left_images_folder = os.path.join(images_folder, "left", '*')
 	left_images_names = sorted(glob.glob(left_images_folder))
 	right_images_folder = os.path.join(images_folder, "right", '*')
@@ -442,14 +445,18 @@ def stereo_match(R, T, Left_Stereo_Map, Right_Stereo_Map, roiL, roiR):
 
 
 if __name__=='__main__':
-	# Uncomment this line to do a new chessboard capture. This is only necessary if you've moved a camera after a good calibration, or if your calibration was bad and you need to re-do it.
-	# capture_streams()
+    parser = argparse.ArgumentParser(description='Stereo Calibration and Matching')
+    parser.add_argument('--chessboard-capture', action='store_true', help='Enable chessboard capture for calibration')
+    args = parser.parse_args()
 
-	# Calibrate the cameras
-	K_left, distortion_coeffs_left = camera_calibrate("left")
-	K_right, distortion_coeffs_right = camera_calibrate("right")
-	R, T, Left_Stereo_Map, Right_Stereo_Map, roiL, roiR = stereo_calibrate_and_rectify(K_left, distortion_coeffs_left, K_right, distortion_coeffs_right)
+    if args.chessboard_capture:
+		# Capture new chessboard images
+        capture_streams()
 
-	# Run stereo matching
-	stereo_match(R, T, Left_Stereo_Map, Right_Stereo_Map, roiL, roiR)
+    # Calibrate the cameras
+    K_left, distortion_coeffs_left = camera_calibrate("left")
+    K_right, distortion_coeffs_right = camera_calibrate("right")
+    R, T, Left_Stereo_Map, Right_Stereo_Map, roiL, roiR = stereo_calibrate_and_rectify(K_left, distortion_coeffs_left, K_right, distortion_coeffs_right)
 
+    # Run stereo matching
+    stereo_match(R, T, Left_Stereo_Map, Right_Stereo_Map, roiL, roiR)
